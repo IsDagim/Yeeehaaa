@@ -2,17 +2,17 @@ import arcade, random, time
 from arcade.types import XYWH
 from arcade.hitbox import HitBox
 
-WIDTH, HEIGHT = 1400, 750
+WIDTH, HEIGHT = 1400, 800
 TITLE = "Vampire joyride"
-BG_FILE = "images/Noche de Halloween en Laranja.png"
+BG_FILE = "sprites/2_game_background.png"
 BAT_SHEET = "sprites/32x32-bat-sprite.png"
-COIN_FILE = "sprites/pumpkin.png"
+COIN_FILE = "sprites/coin.png"
 
 GRAVITY = -1400.0
 THRUST_ACC = 2200.0
 MAX_UP_V = 800.0
 MAX_DN_V = -900.0
-GROUND_Y = 150
+GROUND_Y = 100
 CEILING_Y = 560
 
 SPEED_MIN, SPEED_MAX = 2, 3
@@ -36,12 +36,17 @@ COIN_MAX_Y = 600
 COIN_SPACING_MIN = 80
 COIN_SPACING_MAX = 80
 COIN_SCALE = 0.3
-COIN_SCROLL_SPEED = 2
+COIN_SCROLL_SPEED = 5
 COIN_SPAWN_DELAY = 2.5
+
+GAME_OVER_IMG = "sprites/startscreen.png"  
+heal_sound = arcade.load_sound("sounds/healing-magic-4-378668.mp3")
+arcade.play_sound(heal_sound)
+
 speed_timer=0
 walk_textures = [
-    arcade.load_texture(f"sprites/enemy_running/0_Golem_Running_00{i}.png")
-    for i in range(9)
+    arcade.load_texture(f"sprites/enemy_running/0_Golem_Running_{i}.png")
+    for i in range(11)
 ]
 
 walk_textures2 = [
@@ -190,6 +195,12 @@ class Jetpack(arcade.Window):
         self.glow_alpha = 0
         self.coin_sound = arcade.load_sound("sounds/515736__lilmati__retro-coin-06.wav")
         self.pain_sound = arcade.load_sound("sounds/463347__whisperbandnumber1__fight-grunt-2.wav")
+        self.gameover_sound = arcade.load_sound("sounds/game-over-417465.mp3")
+        self.heal_sound = arcade.load_sound("sounds/healing-magic-4-378668.mp3")
+        
+        self.state = "playing"
+        self.game_over_tex = None
+        self.final_score_text = None
 
     def health_bar(self):
         bar_w, bar_h = 300, 25
@@ -205,7 +216,7 @@ class Jetpack(arcade.Window):
         arcade.draw_rect_outline(XYWH(cx_full, cy, bar_w, bar_h), arcade.color.BLACK, 3)
 
     def draw_replenish_icon(self):
-        """Glowing icon when replenish is ready"""
+       
         if not self.can_replenish:
             return
        
@@ -223,7 +234,20 @@ class Jetpack(arcade.Window):
         )
 
     def game_over(self):
-        self.close()
+        self.state = "game_over"
+        arcade.play_sound(self.gameover_sound) 
+
+        self.game_over_tex = arcade.load_texture(GAME_OVER_IMG)
+        self.final_score_text = arcade.Text(
+            f"Final Score: {self.time_score}",
+            self.width / 2,
+            self.height / 2 - 100,
+            arcade.color.WHITE,
+            36,
+            bold=True,
+            anchor_x="center",
+        )
+
 
     def spawn_coin_batch(self):
         self.coins = arcade.SpriteList()
@@ -244,7 +268,8 @@ class Jetpack(arcade.Window):
             self.player.set_mode("fly")
         if key == arcade.key.R and self.can_replenish:
             self.health = self.max_health
-            self.coin_score -= 3
+            self.coin_score -= 5
+            arcade.play_sound(self.heal_sound)
             self.can_replenish = False
 
     def on_key_release(self, key, mods):
@@ -252,6 +277,9 @@ class Jetpack(arcade.Window):
             self.acent = False
 
     def on_update(self, dt: float):
+        if getattr(self, "state", "playing") == "game_over":
+            return
+
         global speed_timer, SPEED_MIN, SPEED_MAX
         for s in self.backgrounds:
             s.center_x -= 5
@@ -373,7 +401,7 @@ class Jetpack(arcade.Window):
                 return
             self.last_decay_time = now
 
-        if self.coin_score >= 3:
+        if self.coin_score >= 5:
             self.can_replenish = True
 
         self.time_score = int((time.time() - self.start_time) * 10)
@@ -384,6 +412,32 @@ class Jetpack(arcade.Window):
 
     def on_draw(self):
         self.clear()
+
+       
+        if getattr(self, "state", "playing") == "game_over":
+            if self.game_over_tex:
+               
+                arcade.draw_texture_rect(
+                    self.game_over_tex,
+                    XYWH(self.width / 2, self.height / 2, self.width, self.height)
+                )
+            else:
+                arcade.draw_lrtb_rectangle_filled(0, self.width, self.height, 0, arcade.color.BLACK)
+                arcade.draw_text(
+                    "GAME OVER",
+                    self.width / 2,
+                    self.height / 2 + 40,
+                    arcade.color.WHITE,
+                    64,
+                    bold=True,
+                    anchor_x="center",
+                )
+
+            if self.final_score_text:
+                self.final_score_text.draw()
+            return  
+
+       
         self.backgrounds.draw()
         self.coins.draw()
         self.health_bar()
@@ -402,6 +456,7 @@ class Jetpack(arcade.Window):
         self.score_text.text = f"Score: {self.time_score}"
         self.coin_text.draw()
         self.score_text.draw()
+
 
 
 if __name__ == "__main__":
