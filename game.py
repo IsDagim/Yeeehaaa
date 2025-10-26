@@ -1,9 +1,10 @@
 import arcade, random, time
+import os
 from arcade.types import XYWH
 from arcade.hitbox import HitBox
 
 WIDTH, HEIGHT = 1400, 800
-TITLE = "Vampire joyride"
+TITLE = "Count Zoomula"
 BG_FILE = "sprites/2_game_background.png"
 BAT_SHEET = "sprites/32x32-bat-sprite.png"
 COIN_FILE = "sprites/coin.png"
@@ -13,7 +14,7 @@ THRUST_ACC = 2200.0
 MAX_UP_V = 800.0
 MAX_DN_V = -900.0
 GROUND_Y = 100
-CEILING_Y = 560
+CEILING_Y = 750
 
 SPEED_MIN, SPEED_MAX = 2, 3
 SPAWN_DELAY_MIN, SPAWN_DELAY_MAX = 2.5, 4.5
@@ -40,8 +41,8 @@ COIN_SCROLL_SPEED = 5
 COIN_SPAWN_DELAY = 2.5
 
 GAME_OVER_IMG = "sprites/startscreen.png"  
-heal_sound = arcade.load_sound("sounds/healing-magic-4-378668.mp3")
-arcade.play_sound(heal_sound)
+bg_sound = arcade.load_sound("/home/aa293/Yeeehaaa/sounds/creepy-halloween-bells-loop-408748-VEED.mp3")
+arcade.play_sound(bg_sound)
 
 speed_timer=0
 walk_textures = [
@@ -103,6 +104,7 @@ class player(arcade.Sprite):
 class Bat(arcade.Sprite):
     def __init__(self, scale):
         super().__init__(filename=None, scale=3.0)
+        super().__init__(filename=None, scale=3.0)
         sheet = arcade.load_spritesheet(BAT_SHEET)
         w, h = sheet.image.size
         fw, fh = w // 4, h // 4
@@ -143,6 +145,7 @@ class Jetpack(arcade.Window):
         self.backgrounds = arcade.SpriteList()
         self.backgrounds.extend([self.bg, self.bg1])
 
+        self.player = player(2.5)
         self.player = player(2.5)
         self.psprite = arcade.SpriteList()
         self.psprite.append(self.player)
@@ -201,7 +204,7 @@ class Jetpack(arcade.Window):
         self.state = "playing"
         self.game_over_tex = None
         self.final_score_text = None
-
+        self.gameOver=False
     def health_bar(self):
         bar_w, bar_h = 300, 25
         margin = 20
@@ -236,10 +239,11 @@ class Jetpack(arcade.Window):
     def game_over(self):
         self.state = "game_over"
         arcade.play_sound(self.gameover_sound) 
-
+        self.gameOver=True
         self.game_over_tex = arcade.load_texture(GAME_OVER_IMG)
+        
         self.final_score_text = arcade.Text(
-            f"Final Score: {self.time_score}",
+            f"Final Score: {self.time_score} | Press Enter to Restart",
             self.width / 2,
             self.height / 2 - 100,
             arcade.color.WHITE,
@@ -271,6 +275,10 @@ class Jetpack(arcade.Window):
             self.coin_score -= 7
             arcade.play_sound(self.heal_sound)
             self.can_replenish = False
+        if self.gameOver and key == arcade.key.ENTER:
+            self.close()
+            os.system('python /home/aa293/Yeeehaaa/game.py')
+            
 
     def on_key_release(self, key, mods):
         if key == arcade.key.SPACE:
@@ -337,7 +345,7 @@ class Jetpack(arcade.Window):
             self.next_gap = random.uniform(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX)
 
         if len(self.big_walkers) < MAX_BIG_WALKERS and now - self.last_big_spawn_time >= self.next_big_gap:
-            x, y = WIDTH + 100, WALKER_Y+45
+            x, y = WIDTH + 100, WALKER_Y+45+45
             speed = -random.uniform(BIG_SPEED_MIN, BIG_SPEED_MAX)
             self.big_walkers.append([x, y, random.randrange(len(walk_textures2)), speed, now])
             self.last_big_spawn_time = now
@@ -355,7 +363,7 @@ class Jetpack(arcade.Window):
 
         bat_hits = arcade.check_for_collision_with_list(self.player, self.bats)
         if bat_hits:
-            self.health -= self.max_health * 0.20
+            self.health -= self.max_health * 0.25
             arcade.play_sound(self.pain_sound)  
             for b in bat_hits:
                 b.remove_from_sprite_lists()
@@ -370,7 +378,7 @@ class Jetpack(arcade.Window):
             s.center_x, s.center_y = x, y
             if arcade.check_for_collision(self.player, s):
                 if now - self.last_walker_hit >= self.walker_hit_cooldown:
-                    self.health -= self.max_health * 0.25
+                    self.health -= self.max_health * 0.30
                     self.last_walker_hit = now
                     arcade.play_sound(self.pain_sound)  
                     if self.health <= 0:
@@ -394,7 +402,7 @@ class Jetpack(arcade.Window):
             arcade.play_sound(self.coin_sound)
 
 
-        if now - self.last_decay_time >= 5:
+        if now - self.last_decay_time >= 3:
             self.health -= 10
             if self.health <= 0:
                 self.game_over()
@@ -406,6 +414,8 @@ class Jetpack(arcade.Window):
 
         self.time_score = int((time.time() - self.start_time) * 10)
         if self.time_score>speed_timer+100:
+            SPEED_MIN+=5
+            SPEED_MAX+=5
             SPEED_MIN+=5
             SPEED_MAX+=5
             speed_timer=self.time_score
