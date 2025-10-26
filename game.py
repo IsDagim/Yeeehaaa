@@ -40,8 +40,9 @@ COIN_SCROLL_SPEED = 5
 COIN_SPAWN_DELAY = 2.5
 
 GAME_OVER_IMG = "sprites/startscreen.png"  
-heal_sound = arcade.load_sound("sounds/healing-magic-4-378668.mp3")
-arcade.play_sound(heal_sound)
+bg_sound = arcade.load_sound("sounds/creepy-halloween-bells-loop-408748.mp3")
+
+
 
 speed_timer=0
 walk_textures = [
@@ -199,6 +200,7 @@ class Jetpack(arcade.Window):
         self.heal_sound = arcade.load_sound("sounds/healing-magic-4-378668.mp3")
         
         self.state = "playing"
+        arcade.play_sound(bg_sound)
         self.game_over_tex = None
         self.final_score_text = None
 
