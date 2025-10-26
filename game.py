@@ -3,9 +3,10 @@ from arcade.types import XYWH
 from arcade.hitbox import HitBox
 
 WIDTH, HEIGHT = 1400, 750
-TITLE = "Vampire Joyride"
+TITLE = "IDK"
 BG_FILE = "images/Noche de Halloween en Laranja.png"
 BAT_SHEET = "sprites/32x32-bat-sprite.png"
+COIN_FILE = "sprites/pumpkin.png"
 
 GRAVITY = -1400.0
 THRUST_ACC = 2200.0
@@ -20,6 +21,17 @@ SCALE_GLOBAL = 0.2
 FRAME_RATE = 0.1
 MAX_WALKERS = 6
 WALKER_Y = GROUND_Y
+
+
+COIN_MIN_COUNT = 3
+COIN_MAX_COUNT = 8
+COIN_MIN_Y = 250
+COIN_MAX_Y = 600
+COIN_SPACING_MIN = 80
+COIN_SPACING_MAX = 80
+COIN_SCALE = 0.3
+COIN_SCROLL_SPEED = 2
+COIN_SPAWN_DELAY = 2.5
 
 walk_textures = [
     arcade.load_texture(f"sprites/enemy_running/0_Golem_Running_00{i}.png")
@@ -100,6 +112,7 @@ class Jetpack(arcade.Window):
     def __init__(self, width, height, title):
         super().__init__(width, height, title, update_rate=1/60)
         arcade.set_background_color(arcade.color.BLACK)
+
         tex = arcade.load_texture(BG_FILE)
         scale = max(self.width / tex.width, self.height / tex.height)
         self.sprite_w = tex.width * scale
@@ -110,20 +123,45 @@ class Jetpack(arcade.Window):
         self.bg.center_y = self.bg1.center_y = self.height / 2
         self.backgrounds = arcade.SpriteList()
         self.backgrounds.extend([self.bg, self.bg1])
+
+       
         self.player = player(2.0)
         self.psprite = arcade.SpriteList()
         self.psprite.append(self.player)
         self.acent = False
+
+        
         self.walkers = []
         self.last_spawn_time = time.time()
         self.next_gap = random.uniform(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX)
         self.frame_time = 0.0
+
+    
         self.bats = arcade.SpriteList()
         self.last_bat_time = time.time()
         self.next_bat_gap = random.uniform(0.8, 1.6)
 
+        
+        self.coin_tex = arcade.load_texture(COIN_FILE)
+        self.coins = arcade.SpriteList()
+        self.last_coin_spawn = time.time()
+        self.coin_score = 0  
+
     def game_over(self):
         self.close()
+
+    def spawn_coin_batch(self):
+        self.coins = arcade.SpriteList()
+        num_coins = random.randint(COIN_MIN_COUNT, COIN_MAX_COUNT)
+        y = random.randint(COIN_MIN_Y, COIN_MAX_Y)
+        start_x = WIDTH + 100
+        spacing = random.randint(COIN_SPACING_MIN, COIN_SPACING_MAX)
+        for i in range(num_coins):
+            coin = arcade.Sprite(path_or_texture=self.coin_tex, scale=COIN_SCALE)
+            coin.center_x = start_x + i * spacing
+            coin.center_y = y
+            self.coins.append(coin)
+        self.last_coin_spawn = time.time()
 
     def on_key_press(self, key, mods):
         if key == arcade.key.SPACE:
@@ -141,6 +179,15 @@ class Jetpack(arcade.Window):
             self.bg.left = self.bg1.right
         if self.bg1.right <= 0:
             self.bg1.left = self.bg.right
+
+       
+        for coin in self.coins:
+            coin.center_x -= COIN_SCROLL_SPEED
+        if len(self.coins) == 0 or self.coins[-1].center_x < -100:
+            if time.time() - self.last_coin_spawn > COIN_SPAWN_DELAY:
+                self.spawn_coin_batch()
+
+        
         self.player.vy += GRAVITY * dt
         if self.acent:
             self.player.vy += THRUST_ACC * dt
@@ -161,6 +208,8 @@ class Jetpack(arcade.Window):
         else:
             self.player.set_mode('fly')
         self.player.update_animation(dt)
+
+       
         self.frame_time += dt
         if self.frame_time >= FRAME_RATE:
             self.frame_time = 0.0
@@ -179,6 +228,8 @@ class Jetpack(arcade.Window):
             self.walkers.append([x, y, random.randrange(len(walk_textures)), speed, now])
             self.last_spawn_time = now
             self.next_gap = random.uniform(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX)
+
+    
         if now - self.last_bat_time >= self.next_bat_gap:
             self.bats.append(Bat(scale=2.0))
             self.last_bat_time = now
@@ -187,6 +238,8 @@ class Jetpack(arcade.Window):
         for b in list(self.bats):
             if b.right < -50:
                 self.bats.remove(b)
+
+    
         if arcade.check_for_collision_with_list(self.player, self.bats):
             self.game_over()
             return
@@ -198,9 +251,16 @@ class Jetpack(arcade.Window):
                 self.game_over()
                 return
 
+
+        hit_coins = arcade.check_for_collision_with_list(self.player, self.coins)
+        for coin in hit_coins:
+            coin.remove_from_sprite_lists()
+            self.coin_score += 1  
+
     def on_draw(self):
         self.clear()
         self.backgrounds.draw()
+        self.coins.draw()
         for x, y, frame, speed, _ in self.walkers:
             tex = walk_textures[frame]
             w, h = int(tex.width * SCALE_GLOBAL), int(tex.height * SCALE_GLOBAL)
@@ -208,24 +268,15 @@ class Jetpack(arcade.Window):
         self.bats.draw()
         self.psprite.draw()
 
+       
+        arcade.draw_text(
+            f"Coins: {self.coin_score}",
+            20, HEIGHT - 40,
+            arcade.color.YELLOW_ORANGE,
+            24,
+            bold=True
+        )
+
 if __name__ == "__main__":
     Jetpack(WIDTH, HEIGHT, TITLE)
     arcade.run()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
