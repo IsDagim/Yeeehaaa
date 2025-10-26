@@ -188,6 +188,8 @@ class Jetpack(arcade.Window):
 
         self.can_replenish = False
         self.glow_alpha = 0
+        self.coin_sound = arcade.load_sound("sounds/515736__lilmati__retro-coin-06.wav")
+        self.pain_sound = arcade.load_sound("sounds/463347__whisperbandnumber1__fight-grunt-2.wav")
 
     def health_bar(self):
         bar_w, bar_h = 300, 25
@@ -325,11 +327,13 @@ class Jetpack(arcade.Window):
         bat_hits = arcade.check_for_collision_with_list(self.player, self.bats)
         if bat_hits:
             self.health -= self.max_health * 0.15
+            arcade.play_sound(self.pain_sound)  # <-- add this
             for b in bat_hits:
                 b.remove_from_sprite_lists()
             if self.health <= 0:
                 self.game_over()
                 return
+
 
         for x, y, frame, speed, _ in self.walkers:
             tex = walk_textures[frame]
@@ -339,10 +343,12 @@ class Jetpack(arcade.Window):
                 if now - self.last_walker_hit >= self.walker_hit_cooldown:
                     self.health -= self.max_health * 0.10
                     self.last_walker_hit = now
+                    arcade.play_sound(self.pain_sound)  # <-- add this
                     if self.health <= 0:
                         self.game_over()
                         return
                 break
+
 
         for x, y, frame, speed, _ in self.big_walkers:
             tex = walk_textures2[frame]
@@ -356,6 +362,8 @@ class Jetpack(arcade.Window):
         for coin in hit_coins:
             coin.remove_from_sprite_lists()
             self.coin_score += 1
+            arcade.play_sound(self.coin_sound)
+
 
         if now - self.last_decay_time >= 5:
             self.health -= 5
