@@ -3,7 +3,7 @@ from arcade.types import XYWH
 from arcade.hitbox import HitBox
 
 WIDTH, HEIGHT = 1400, 750
-TITLE = "IDK"
+TITLE = "Vampire joyride"
 BG_FILE = "images/Noche de Halloween en Laranja.png"
 BAT_SHEET = "sprites/32x32-bat-sprite.png"
 COIN_FILE = "sprites/pumpkin.png"
@@ -38,7 +38,7 @@ COIN_SPACING_MAX = 80
 COIN_SCALE = 0.3
 COIN_SCROLL_SPEED = 2
 COIN_SPAWN_DELAY = 2.5
-
+speed_timer=0
 walk_textures = [
     arcade.load_texture(f"sprites/enemy_running/0_Golem_Running_00{i}.png")
     for i in range(9)
@@ -252,8 +252,9 @@ class Jetpack(arcade.Window):
             self.acent = False
 
     def on_update(self, dt: float):
+        global speed_timer, SPEED_MIN, SPEED_MAX
         for s in self.backgrounds:
-            s.center_x -= 2
+            s.center_x -= 5
         if self.bg.right <= 0:
             self.bg.left = self.bg1.right
         if self.bg1.right <= 0:
@@ -327,7 +328,7 @@ class Jetpack(arcade.Window):
         bat_hits = arcade.check_for_collision_with_list(self.player, self.bats)
         if bat_hits:
             self.health -= self.max_health * 0.15
-            arcade.play_sound(self.pain_sound)  # <-- add this
+            arcade.play_sound(self.pain_sound)  
             for b in bat_hits:
                 b.remove_from_sprite_lists()
             if self.health <= 0:
@@ -343,7 +344,7 @@ class Jetpack(arcade.Window):
                 if now - self.last_walker_hit >= self.walker_hit_cooldown:
                     self.health -= self.max_health * 0.10
                     self.last_walker_hit = now
-                    arcade.play_sound(self.pain_sound)  # <-- add this
+                    arcade.play_sound(self.pain_sound)  
                     if self.health <= 0:
                         self.game_over()
                         return
@@ -376,6 +377,10 @@ class Jetpack(arcade.Window):
             self.can_replenish = True
 
         self.time_score = int((time.time() - self.start_time) * 10)
+        if self.time_score>speed_timer+100:
+            SPEED_MIN+=2
+            SPEED_MAX+=2
+            speed_timer=self.time_score
 
     def on_draw(self):
         self.clear()
