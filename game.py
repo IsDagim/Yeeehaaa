@@ -10,7 +10,7 @@ MAX_DN_V   = -900.0
 GROUND_Y   = 150
 CEILING_Y  = 560
 
-class player(arcade.Sprite):  # keep Sprite
+class player(arcade.Sprite):  
     def __init__(self, scale):
         
         super().__init__(filename=None, scale=scale)
@@ -20,17 +20,17 @@ class player(arcade.Sprite):  # keep Sprite
 
         walk = arcade.load_spritesheet('sprites/Vampires1_Walk_full.png')
         walkGrid=walk.get_texture_grid(size=(64,64), columns=6, count=24)
-        self.walk_texture = walkGrid[18:]  # last row (6 frames)
+        self.walk_texture = walkGrid[18:]  
 
         fly = arcade.load_spritesheet('sprites/Vampires1_Run_full.png')
         flyGrid=fly.get_texture_grid(size=(64,64), columns=6, count=24)
-        self.fly_texture = flyGrid[18:]    # last row (6 frames)
+        self.fly_texture = flyGrid[18:]    
 
-        # animation state
-        self._frames = []          # active frame list (Textures)
+        
+        self._frames = []          
         self._frame_idx = 0
         self._frame_timer = 0.0
-        self._frame_dur = 0.11     # seconds per frame (walk default)
+        self._frame_dur = 0.11     
 
         self.set_mode('walk')
         self.vy = 0.0
@@ -41,16 +41,16 @@ class player(arcade.Sprite):  # keep Sprite
         self.mode = mode
         if mode == 'walk':
             self._frames = self.walk_texture
-            self._frame_dur = 0.11   # 110 ms
+            self._frame_dur = 0.11   
         else:  # 'fly'
             self._frames = self.fly_texture
-            self._frame_dur = 0.30   # 300 ms (adjust to taste)
+            self._frame_dur = 0.30  
 
         self._frame_idx = 0
         self._frame_timer = 0.0
         self.texture = self._frames[self._frame_idx]
 
-    # Sprite has update_animation hook; we implement it
+    
     def update_animation(self, dt: float = 1/60):
         if not self._frames:
             return
@@ -79,7 +79,7 @@ class Jetpack(arcade.Window):
         self.player = player(2.0)
         self.psprite = arcade.SpriteList()
         self.psprite.append(self.player)
-        self.acent = False  # track Space
+        self.acent = False  
 
     def on_key_press(self, key, mods):
         if key == arcade.key.SPACE:
@@ -91,7 +91,7 @@ class Jetpack(arcade.Window):
             self.acent = False
 
     def on_update(self, dt: float):
-        # Scroll background
+        
         for s in self.backgrounds:
             s.center_x -= 2
         if self.bg.right <= 0:
@@ -99,24 +99,24 @@ class Jetpack(arcade.Window):
         if self.bg1.right <= 0:
             self.bg1.left = self.bg.right
         
-        # --- Jetpack physics ---
+        
         self.player.vy += GRAVITY * dt
         if self.acent:
             self.player.vy += THRUST_ACC * dt
 
-        # Clamp velocity
+        
         if self.player.vy > MAX_UP_V:  self.player.vy = MAX_UP_V
         if self.player.vy < MAX_DN_V:  self.player.vy = MAX_DN_V
 
-        # Integrate position
+       
         self.player.center_y += self.player.vy * dt
 
-        # Ceiling
+        
         if self.player.center_y > CEILING_Y:
             self.player.center_y = CEILING_Y
             if self.player.vy > 0: self.player.vy = 0
 
-        # Ground
+        
         if self.player.center_y <= GROUND_Y:
             self.player.center_y = GROUND_Y
             if self.player.vy < 0: self.player.vy = 0
@@ -129,7 +129,7 @@ class Jetpack(arcade.Window):
     def on_draw(self):
         self.clear()
         self.backgrounds.draw()
-        self.psprite.draw()   # minimal change: draw the SpriteList you created
+        self.psprite.draw()   
 
 if __name__ == "__main__":
     Jetpack(WIDTH, HEIGHT, TITLE)
