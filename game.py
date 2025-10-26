@@ -1,9 +1,11 @@
 import arcade, random, time
 from arcade.types import XYWH
+from arcade.hitbox import HitBox
 
 WIDTH, HEIGHT = 1400, 750
-TITLE = "Jetpack + Walkers"
+TITLE = "Vampire Joyride"
 BG_FILE = "images/Noche de Halloween en Laranja.png"
+BAT_SHEET = "sprites/32x32-bat-sprite.png"
 
 GRAVITY = -1400.0
 THRUST_ACC = 2200.0
@@ -27,8 +29,6 @@ walk_textures = [
 class player(arcade.Sprite):
     def __init__(self, scale):
         super().__init__(filename=None, scale=scale)
-        self.center_x = 200
-        self.center_y = GROUND_Y
         self.mode = None
         walk = arcade.load_spritesheet('sprites/Vampires1_Walk_full.png')
         walkGrid = walk.get_texture_grid(size=(64,64), columns=6, count=24)
@@ -41,6 +41,8 @@ class player(arcade.Sprite):
         self._frame_timer = 0.0
         self._frame_dur = 0.11
         self.set_mode('walk')
+        self.center_x = 200
+        self.center_y = GROUND_Y
         self.vy = 0.0
 
     def set_mode(self, mode):
@@ -56,6 +58,7 @@ class player(arcade.Sprite):
         self._frame_idx = 0
         self._frame_timer = 0.0
         self.texture = self._frames[self._frame_idx]
+        self.hit_box = HitBox(self.texture.hit_box_points)
 
     def update_animation(self, dt: float = 1/60):
         if not self._frames:
@@ -65,6 +68,33 @@ class player(arcade.Sprite):
             self._frame_timer -= self._frame_dur
             self._frame_idx = (self._frame_idx + 1) % len(self._frames)
             self.texture = self._frames[self._frame_idx]
+            self.hit_box = HitBox(self.texture.hit_box_points)
+
+class Bat(arcade.Sprite):
+    def __init__(self, scale):
+        super().__init__(filename=None, scale=scale)
+        sheet = arcade.load_spritesheet(BAT_SHEET)
+        w, h = sheet.image.size
+        fw, fh = w // 4, h // 4
+        grid = sheet.get_texture_grid(size=(fw, fh), columns=4, count=16)
+        self._frames = grid[12:16]
+        self.texture = self._frames[0]
+        self.hit_box = HitBox(self.texture.hit_box_points)
+        self._frame_idx = 0
+        self._frame_timer = 0.0
+        self._frame_dur = 0.08
+        self.vx = -random.uniform(SPEED_MIN+10, SPEED_MAX+10)
+        self.center_x = WIDTH + 100
+        self.center_y = random.randint(GROUND_Y + 80, HEIGHT - 60)
+
+    def update_animation(self, dt: float = 1/60):
+        self.center_x += self.vx
+        self._frame_timer += dt
+        if self._frame_timer >= self._frame_dur:
+            self._frame_timer -= self._frame_dur
+            self._frame_idx = (self._frame_idx + 1) % len(self._frames)
+            self.texture = self._frames[self._frame_idx]
+            self.hit_box = HitBox(self.texture.hit_box_points)
 
 class Jetpack(arcade.Window):
     def __init__(self, width, height, title):
@@ -88,6 +118,12 @@ class Jetpack(arcade.Window):
         self.last_spawn_time = time.time()
         self.next_gap = random.uniform(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX)
         self.frame_time = 0.0
+        self.bats = arcade.SpriteList()
+        self.last_bat_time = time.time()
+        self.next_bat_gap = random.uniform(0.8, 1.6)
+
+    def game_over(self):
+        self.close()
 
     def on_key_press(self, key, mods):
         if key == arcade.key.SPACE:
@@ -143,6 +179,24 @@ class Jetpack(arcade.Window):
             self.walkers.append([x, y, random.randrange(len(walk_textures)), speed, now])
             self.last_spawn_time = now
             self.next_gap = random.uniform(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX)
+        if now - self.last_bat_time >= self.next_bat_gap:
+            self.bats.append(Bat(scale=2.0))
+            self.last_bat_time = now
+            self.next_bat_gap = random.uniform(0.8, 1.6)
+        self.bats.update_animation(dt)
+        for b in list(self.bats):
+            if b.right < -50:
+                self.bats.remove(b)
+        if arcade.check_for_collision_with_list(self.player, self.bats):
+            self.game_over()
+            return
+        for x, y, frame, speed, _ in self.walkers:
+            tex = walk_textures[frame]
+            s = arcade.Sprite(path_or_texture=tex, scale=SCALE_GLOBAL)
+            s.center_x, s.center_y = x, y
+            if arcade.check_for_collision(self.player, s):
+                self.game_over()
+                return
 
     def on_draw(self):
         self.clear()
@@ -151,11 +205,14 @@ class Jetpack(arcade.Window):
             tex = walk_textures[frame]
             w, h = int(tex.width * SCALE_GLOBAL), int(tex.height * SCALE_GLOBAL)
             arcade.draw_texture_rect(tex, XYWH(x, y, w, h))
+        self.bats.draw()
         self.psprite.draw()
 
 if __name__ == "__main__":
     Jetpack(WIDTH, HEIGHT, TITLE)
     arcade.run()
+
+
 
 
 
