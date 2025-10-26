@@ -49,15 +49,16 @@ walk_textures2 = [
     for i in range(9)
 ]
 
+
 class player(arcade.Sprite):
     def __init__(self, scale):
         super().__init__(filename=None, scale=scale)
         self.mode = None
         walk = arcade.load_spritesheet('sprites/Vampires1_Walk_full.png')
-        walkGrid = walk.get_texture_grid(size=(64,64), columns=6, count=24)
+        walkGrid = walk.get_texture_grid(size=(64, 64), columns=6, count=24)
         self.walk_texture = walkGrid[18:]
         fly = arcade.load_spritesheet('sprites/Vampires1_Run_full.png')
-        flyGrid = fly.get_texture_grid(size=(64,64), columns=6, count=24)
+        flyGrid = fly.get_texture_grid(size=(64, 64), columns=6, count=24)
         self.fly_texture = flyGrid[18:]
         self._frames = []
         self._frame_idx = 0
@@ -83,7 +84,7 @@ class player(arcade.Sprite):
         self.texture = self._frames[self._frame_idx]
         self.hit_box = HitBox(self.texture.hit_box_points)
 
-    def update_animation(self, dt: float = 1/60):
+    def update_animation(self, dt: float = 1 / 60):
         if not self._frames:
             return
         self._frame_timer += dt
@@ -92,6 +93,7 @@ class player(arcade.Sprite):
             self._frame_idx = (self._frame_idx + 1) % len(self._frames)
             self.texture = self._frames[self._frame_idx]
             self.hit_box = HitBox(self.texture.hit_box_points)
+
 
 class Bat(arcade.Sprite):
     def __init__(self, scale):
@@ -106,11 +108,11 @@ class Bat(arcade.Sprite):
         self._frame_idx = 0
         self._frame_timer = 0.0
         self._frame_dur = 0.08
-        self.vx = -random.uniform(SPEED_MIN+10, SPEED_MAX+10)
+        self.vx = -random.uniform(SPEED_MIN + 10, SPEED_MAX + 10)
         self.center_x = WIDTH + 100
         self.center_y = random.randint(GROUND_Y + 80, HEIGHT - 60)
 
-    def update_animation(self, dt: float = 1/60):
+    def update_animation(self, dt: float = 1 / 60):
         self.center_x += self.vx
         self._frame_timer += dt
         if self._frame_timer >= self._frame_dur:
@@ -119,9 +121,10 @@ class Bat(arcade.Sprite):
             self.texture = self._frames[self._frame_idx]
             self.hit_box = HitBox(self.texture.hit_box_points)
 
+
 class Jetpack(arcade.Window):
     def __init__(self, width, height, title):
-        super().__init__(width, height, title, update_rate=1/60)
+        super().__init__(width, height, title, update_rate=1 / 60)
         arcade.set_background_color(arcade.color.BLACK)
 
         tex = arcade.load_texture(BG_FILE)
@@ -135,19 +138,16 @@ class Jetpack(arcade.Window):
         self.backgrounds = arcade.SpriteList()
         self.backgrounds.extend([self.bg, self.bg1])
 
-       
         self.player = player(2.0)
         self.psprite = arcade.SpriteList()
         self.psprite.append(self.player)
         self.acent = False
 
-        
         self.walkers = []
         self.last_spawn_time = time.time()
         self.next_gap = random.uniform(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX)
         self.frame_time = 0.0
 
-    
         self.bats = arcade.SpriteList()
         self.last_bat_time = time.time()
         self.next_bat_gap = random.uniform(0.8, 1.6)
@@ -156,26 +156,68 @@ class Jetpack(arcade.Window):
         self.last_big_spawn_time = time.time()
         self.next_big_gap = random.uniform(BIG_SPAWN_DELAY_MIN, BIG_SPAWN_DELAY_MAX)
 
-
-        
         self.coin_tex = arcade.load_texture(COIN_FILE)
         self.coins = arcade.SpriteList()
         self.last_coin_spawn = time.time()
-        self.coin_score = 0  
+        self.coin_score = 0
 
         self.start_time = time.time()
         self.time_score = 0
         self.coin_text = arcade.Text(
             f"Coins: {self.coin_score}",
-            20, HEIGHT - 40,
+            20,
+            HEIGHT - 40,
             arcade.color.YELLOW_ORANGE,
-            24, bold=True
+            24,
+            bold=True,
         )
         self.score_text = arcade.Text(
             f"Score: {self.time_score}",
-            20, HEIGHT - 80,
+            20,
+            HEIGHT - 80,
             arcade.color.WHITE,
-            24, bold=True
+            24,
+            bold=True,
+        )
+
+        self.max_health = 100
+        self.health = self.max_health
+        self.last_decay_time = time.time()
+        self.last_walker_hit = 0.0
+        self.walker_hit_cooldown = 0.6
+
+        self.can_replenish = False
+        self.glow_alpha = 0
+
+    def health_bar(self):
+        bar_w, bar_h = 300, 25
+        margin = 20
+        cy = HEIGHT - 40
+        cx_full = WIDTH - margin - bar_w / 2
+        ratio = max(0.0, min(1.0, self.health / self.max_health))
+        color = arcade.color.APPLE_GREEN if ratio > 0.6 else arcade.color.GOLD if ratio > 0.3 else arcade.color.RED
+        arcade.draw_rect_filled(XYWH(cx_full, cy, bar_w, bar_h), arcade.color.DIM_GRAY)
+        fill_w = bar_w * ratio
+        cx_fill = WIDTH - margin - fill_w / 2
+        arcade.draw_rect_filled(XYWH(cx_fill, cy, fill_w, bar_h), color)
+        arcade.draw_rect_outline(XYWH(cx_full, cy, bar_w, bar_h), arcade.color.BLACK, 3)
+
+    def draw_replenish_icon(self):
+        """Glowing icon when replenish is ready"""
+        if not self.can_replenish:
+            return
+       
+        self.glow_alpha = (self.glow_alpha + 4) % 510
+        alpha = 255 - abs(self.glow_alpha - 255)
+        x, y = WIDTH - 170, HEIGHT - 80
+        arcade.draw_text(
+            "r to replenish",
+            x,
+            y,
+            (255, 255, 255, int(alpha)),
+            22,
+            bold=True,
+            anchor_x="center",
         )
 
     def game_over(self):
@@ -197,7 +239,11 @@ class Jetpack(arcade.Window):
     def on_key_press(self, key, mods):
         if key == arcade.key.SPACE:
             self.acent = True
-            self.player.set_mode('fly')
+            self.player.set_mode("fly")
+        if key == arcade.key.R and self.can_replenish:
+            self.health = self.max_health
+            self.coin_score -= 3
+            self.can_replenish = False
 
     def on_key_release(self, key, mods):
         if key == arcade.key.SPACE:
@@ -211,7 +257,6 @@ class Jetpack(arcade.Window):
         if self.bg1.right <= 0:
             self.bg1.left = self.bg.right
 
-       
         for coin in self.coins:
             coin.center_x -= COIN_SCROLL_SPEED
         if len(self.coins) == 0 or self.coins[-1].center_x < -100:
@@ -222,24 +267,20 @@ class Jetpack(arcade.Window):
         self.player.vy += GRAVITY * dt
         if self.acent:
             self.player.vy += THRUST_ACC * dt
-        if self.player.vy > MAX_UP_V:
-            self.player.vy = MAX_UP_V
-        if self.player.vy < MAX_DN_V:
-            self.player.vy = MAX_DN_V
+        self.player.vy = max(min(self.player.vy, MAX_UP_V), MAX_DN_V)
         self.player.center_y += self.player.vy * dt
         if self.player.center_y > CEILING_Y:
             self.player.center_y = CEILING_Y
-            if self.player.vy > 0:
-                self.player.vy = 0
+            self.player.vy = 0
         if self.player.center_y <= GROUND_Y:
             self.player.center_y = GROUND_Y
-            if self.player.vy < 0:
-                self.player.vy = 0
-            self.player.set_mode('fly' if self.acent else 'walk')
+            self.player.vy = 0
+            self.player.set_mode("fly" if self.acent else "walk")
         else:
-            self.player.set_mode('fly')
+            self.player.set_mode("fly")
         self.player.update_animation(dt)
 
+        now = time.time()
        
         self.frame_time += dt
         if self.frame_time >= FRAME_RATE:
@@ -248,7 +289,7 @@ class Jetpack(arcade.Window):
                 w[2] = (w[2] + 1) % len(walk_textures)
             for bw in self.big_walkers:
                 bw[2] = (bw[2] + 1) % len(walk_textures2)
-            
+
         for w in self.walkers:
             w[0] += w[3]
         self.walkers = [w for w in self.walkers if w[0] >= -100]
@@ -256,9 +297,6 @@ class Jetpack(arcade.Window):
             bw[0] += bw[3]
         self.big_walkers = [bw for bw in self.big_walkers if bw[0] >= -200]
 
-
-
-        now = time.time()
         if len(self.walkers) < MAX_WALKERS and now - self.last_spawn_time >= self.next_gap:
             x = WIDTH + 100
             y = WALKER_Y
@@ -283,36 +321,63 @@ class Jetpack(arcade.Window):
             if b.right < -50:
                 self.bats.remove(b)
 
-    
-        if arcade.check_for_collision_with_list(self.player, self.bats):
-            self.game_over()
-            return
-        for group, textures, scale in [
-            (self.walkers, walk_textures, SCALE_GLOBAL),
-            (self.big_walkers, walk_textures2, BIG_SCALE),
-        ]:
-            for x, y, frame, speed, _ in self.walkers:
-                tex = walk_textures[frame]
-                s = arcade.Sprite(path_or_texture=tex, scale=SCALE_GLOBAL)
-                s.center_x, s.center_y = x, y
-                if arcade.check_for_collision(self.player, s):
-                    self.game_over()
-                    return
 
+        bat_hits = arcade.check_for_collision_with_list(self.player, self.bats)
+        if bat_hits:
+            self.health -= self.max_health * 0.15
+            for b in bat_hits:
+                b.remove_from_sprite_lists()
+            if self.health <= 0:
+                self.game_over()
+                return
+
+        for x, y, frame, speed, _ in self.walkers:
+            tex = walk_textures[frame]
+            s = arcade.Sprite(path_or_texture=tex, scale=SCALE_GLOBAL)
+            s.center_x, s.center_y = x, y
+            if arcade.check_for_collision(self.player, s):
+                if now - self.last_walker_hit >= self.walker_hit_cooldown:
+                    self.health -= self.max_health * 0.10
+                    self.last_walker_hit = now
+                    if self.health <= 0:
+                        self.game_over()
+                        return
+                break
+
+        for x, y, frame, speed, _ in self.big_walkers:
+            tex = walk_textures2[frame]
+            s = arcade.Sprite(path_or_texture=tex, scale=BIG_SCALE)
+            s.center_x, s.center_y = x, y
+            if arcade.check_for_collision(self.player, s):
+                self.game_over()
+                return
 
         hit_coins = arcade.check_for_collision_with_list(self.player, self.coins)
         for coin in hit_coins:
             coin.remove_from_sprite_lists()
-            self.coin_score += 1  
+            self.coin_score += 1
+
+        if now - self.last_decay_time >= 5:
+            self.health -= 5
+            if self.health <= 0:
+                self.game_over()
+                return
+            self.last_decay_time = now
+
+        if self.coin_score >= 3:
+            self.can_replenish = True
+
         self.time_score = int((time.time() - self.start_time) * 10)
 
     def on_draw(self):
         self.clear()
         self.backgrounds.draw()
         self.coins.draw()
-
+        self.health_bar()
+        self.draw_replenish_icon()
         self.bats.draw()
         self.psprite.draw()
+
         for x, y, frame, speed, _ in self.walkers:
             tex = walk_textures[frame]
             arcade.draw_texture_rect(tex, XYWH(x, y, tex.width * SCALE_GLOBAL, tex.height * SCALE_GLOBAL))
@@ -320,11 +385,11 @@ class Jetpack(arcade.Window):
             tex = walk_textures2[frame]
             arcade.draw_texture_rect(tex, XYWH(x, y, tex.width * BIG_SCALE, tex.height * BIG_SCALE))
 
-       
         self.coin_text.text = f"Coins: {self.coin_score}"
         self.score_text.text = f"Score: {self.time_score}"
         self.coin_text.draw()
         self.score_text.draw()
+
 
 if __name__ == "__main__":
     Jetpack(WIDTH, HEIGHT, TITLE)
