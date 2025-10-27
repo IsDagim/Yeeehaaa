@@ -104,7 +104,6 @@ class player(arcade.Sprite):
 class Bat(arcade.Sprite):
     def __init__(self, scale):
         super().__init__(filename=None, scale=3.0)
-        super().__init__(filename=None, scale=3.0)
         sheet = arcade.load_spritesheet(BAT_SHEET)
         w, h = sheet.image.size
         fw, fh = w // 4, h // 4
@@ -145,7 +144,6 @@ class Jetpack(arcade.Window):
         self.backgrounds = arcade.SpriteList()
         self.backgrounds.extend([self.bg, self.bg1])
 
-        self.player = player(2.5)
         self.player = player(2.5)
         self.psprite = arcade.SpriteList()
         self.psprite.append(self.player)
@@ -272,7 +270,7 @@ class Jetpack(arcade.Window):
             self.player.set_mode("fly")
         if key == arcade.key.R and self.can_replenish:
             self.health = self.max_health
-            self.coin_score -= 7
+            self.coin_score -= 5
             arcade.play_sound(self.heal_sound)
             self.can_replenish = False
         if self.gameOver and key == arcade.key.ENTER:
@@ -345,7 +343,7 @@ class Jetpack(arcade.Window):
             self.next_gap = random.uniform(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX)
 
         if len(self.big_walkers) < MAX_BIG_WALKERS and now - self.last_big_spawn_time >= self.next_big_gap:
-            x, y = WIDTH + 100, WALKER_Y+45+45
+            x, y = WIDTH + 100, WALKER_Y+45
             speed = -random.uniform(BIG_SPEED_MIN, BIG_SPEED_MAX)
             self.big_walkers.append([x, y, random.randrange(len(walk_textures2)), speed, now])
             self.last_big_spawn_time = now
@@ -409,13 +407,11 @@ class Jetpack(arcade.Window):
                 return
             self.last_decay_time = now
 
-        if self.coin_score >= 7:
+        if self.coin_score >= 5:
             self.can_replenish = True
 
         self.time_score = int((time.time() - self.start_time) * 10)
         if self.time_score>speed_timer+100:
-            SPEED_MIN+=5
-            SPEED_MAX+=5
             SPEED_MIN+=5
             SPEED_MAX+=5
             speed_timer=self.time_score
@@ -466,12 +462,6 @@ class Jetpack(arcade.Window):
         self.score_text.text = f"Score: {self.time_score}"
         self.coin_text.draw()
         self.score_text.draw()
-
-
-
-if __name__ == "__main__":
-    Jetpack(WIDTH, HEIGHT, TITLE)
-    arcade.run()
 
 
 
